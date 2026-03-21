@@ -1,3 +1,4 @@
+#  Intended to be stored in /opt/imds/aws_imds_mock.py
 #!/usr/bin/env python3
 """
 AWS IMDS Mock Server - Para testing de SSRF
