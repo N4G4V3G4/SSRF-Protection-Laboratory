@@ -1,4 +1,5 @@
 #  Intended to be stored in /opt/imds/aws_imds_mock.py
+#  Command to make 169.154... loopback address: sudo ip addr add 169.254.169.254/32 dev lo
 #!/usr/bin/env python3
 """
 AWS IMDS Mock Server - Para testing de SSRF
